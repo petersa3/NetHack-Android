@@ -2,6 +2,13 @@ plugins {
   id 'com.android.application'
 }
 
+// Load signing config from local.properties (not in git)
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file('local.properties')
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withInputStream { localProperties.load(it) }
+}
+
 android {
   namespace 'com.tbd.NetHack'
   compileSdk 34
@@ -24,6 +31,27 @@ android {
 
   lintOptions {
     disable 'MissingClass'
+  }
+
+  signingConfigs {
+    release {
+      if (localProperties['RELEASE_STORE_FILE']) {
+        storeFile file(localProperties['RELEASE_STORE_FILE'])
+        storePassword localProperties['RELEASE_STORE_PASSWORD']
+        keyAlias localProperties['RELEASE_KEY_ALIAS']
+        keyPassword localProperties['RELEASE_KEY_PASSWORD']
+      }
+    }
+  }
+
+  buildTypes {
+    release {
+      minifyEnabled false
+      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+      if (localProperties['RELEASE_STORE_FILE']) {
+        signingConfig signingConfigs.release
+      }
+    }
   }
 
   sourceSets {
