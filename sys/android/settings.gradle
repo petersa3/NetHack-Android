@@ -1,7 +1,7 @@
 include ':app'
 rootProject.name = 'NetHack-Android'
 sourceControl {
-    gitRepository("https://github.com/gurrhack/ForkFront-Android.git") {
+    gitRepository("https://github.com/petersa3/ForkFront-Android.git") {
         producesModule("com.tbd.forkfront:lib")
     }
 }
