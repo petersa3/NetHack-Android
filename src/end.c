@@ -1714,6 +1714,31 @@ void
 nh_terminate(status)
 int status;
 {
+    /* DEBUG: Log when nh_terminate is called */
+    debuglog("nh_terminate called with status=%d, program_state.gameover=%d, program_state.something_worth_saving=%d",
+             status, program_state.gameover, program_state.something_worth_saving);
+    
+#ifdef PANICTRACE_LIBC
+    /* Add stack trace for debugging */
+    {
+        void *bt[20];
+        size_t count, x;
+        char **info;
+        
+        count = backtrace(bt, SIZE(bt));
+        info = backtrace_symbols(bt, count);
+        if (info) {
+            debuglog("Stack trace (%lu frames):", (unsigned long) count);
+            for (x = 0; x < count; x++) {
+                debuglog("  [%lu] %s", (unsigned long) x, info[x]);
+            }
+            /* Don't free info to avoid issues during termination */
+        } else {
+            debuglog("Failed to get stack trace");
+        }
+    }
+#endif
+    
     program_state.in_moveloop = 0; /* won't be returning to normal play */
 #ifdef MAC
     getreturn("to exit");
