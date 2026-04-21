@@ -1,85 +1,26 @@
-*.swp
-*.swo
-compile
-out
+# Build artifacts
+*.o
+*.so
+Sysandroid
+Sysunix
 
-# /
-/Makefile
-/config.log
-/config.status
-/tags
-/TAGS
-/.svn
-
-# Win32-specific ignores
-Debug/
-Release/
-binary/
+# Android build directories
+.gradle/
 build/
-ipch/
-lib/
-Nethack.sln
-Nethack.sdf
-Nethack.opensdf
-Makefile.bcc
-Makefile.gcc
-Makefile-orig
-Makefile.bcc-orig
-Makefile.gcc-orig
-*.suo
-*.pdb
-*.ilk
-# VS2013 extension to auto-whine about questionable code generates these
-*.lastcodeanalysissucceeded
-# VS 2017 caches data into the hidden directory .vs
-.vs
-# Win32-specific ignores end
-.DS_Store
+app/build/
+lib/build/
 
-# /dat/
-/dat/Makefile
+# Local properties
+local.properties
 
-# /doc/
-/doc/Makefile
-/doc/Guidebook.txt
+# IDE files
+.idea/
+*.iml
 
-# /include/
-/include/autoconf.h
-/include/autoconf_paths.h
-/include/date.h
-/include/dgn_comp.h
-/include/lev_comp.h
-/include/onames.h
-/include/pm.h
-/include/vis_tab.h
-/include/win32api.h
+# NDK
+obj/
 
-# /src/
-/src/*.o
-/src/nhwin.a
-/src/nethack
-/src/Makefile
-/src/Sysunix
-/src/config.h-t
-/src/hack.h-t
-/src/vis_tab.c
-/src/monstr.c
-/src/tile.c
-/src/Sysandroid
-
-# /util/
-/util/*.o
-/util/Makefile
-/util/dgn_comp
-/util/dgn_lex.c
-/util/dgn_yacc.c
-/util/dlb
-/util/lev_comp
-/util/lev_lex.c
-/util/lev_yacc.c
-/util/makedefs
-/util/recover
-/util/tilemap
-
-# /win/
-/win/*/*.o
+# Temporary files
+*~
+*.swp
+*.tmp
