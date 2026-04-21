@@ -19,6 +19,7 @@
 		<activity
 			android:name="com.tbd.forkfront.ForkFront"
 			android:label="NetHack"
+			android:exported="true"
 			android:windowSoftInputMode="adjustResize|stateAlwaysHidden"
 			android:launchMode="singleTask"
 			android:configChanges="mcc|mnc|locale|keyboard|keyboardHidden|orientation|screenSize|smallestScreenSize|screenLayout|fontScale">
@@ -32,6 +33,7 @@
 		</activity>
 		<activity
 			android:name="com.tbd.forkfront.Settings"
+			android:exported="false"
 			android:label="NetHack Settings">
 		</activity>
 	</application>

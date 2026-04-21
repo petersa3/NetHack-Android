@@ -37,5 +37,5 @@ android {
 }
 
 dependencies {
-  implementation 'com.tbd.forkfront:lib:1.2'
+  implementation project(':ForkFront-Android:lib')
 }
