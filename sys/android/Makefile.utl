@@ -92,8 +92,10 @@ NHSROOT=..
 # flags for debugging:
 # CFLAGS = -g -I../include
 
-CFLAGS = -DANDROID -m32 -Wno-format -fsigned-char -I../include
-LFLAGS = -m32
+# Host compiler flags for building utilities (not for Android target)
+# Note: makedefs needs ANDROID defined to generate correct headers
+CFLAGS = -DANDROID -Wno-format -fsigned-char -I../include
+LFLAGS =
 
 LIBS =
  
