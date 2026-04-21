@@ -24,10 +24,11 @@ mkdir -p sys/android/app/libs/$ABI
 
 cd src
 
-# Build makedefs first (using host compiler)
+# Build makedefs first (using host compiler - no cross-compile flags)
 cd ../util
 make clean || true
-make makedefs
+# Build makedefs with host compiler, with ANDROID defined
+make makedefs CC=cc CFLAGS="-DANDROID -Wno-format -fsigned-char -I../include"
 
 # Generate required headers
 cd ../src
