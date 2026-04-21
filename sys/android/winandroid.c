@@ -399,13 +399,16 @@ void and_player_selection()
 	anything any;
 	menu_item *selected = 0;
 
-	//debuglog("and_player_selection()");
+	debuglog("and_player_selection() called, program_state.something_worth_saving=%d", program_state.something_worth_saving);
+	debuglog("Initial flags: initrole=%d, initrace=%d, initgend=%d, initalign=%d",
+		flags.initrole, flags.initrace, flags.initgend, flags.initalign);
 
 	/* prevent an unnecessary prompt */
 	rigid_role_checks();
 
 	while(flags.initalign < 0)
 	{
+		debuglog("and_player_selection: starting loop iteration, state=%d, flags.initalign=%d", state, flags.initalign);
 		if(state < 2)
 		{
 			if(!state)
@@ -418,44 +421,64 @@ void and_player_selection()
 		flags.initgend = -1;
 		flags.initalign = -1;
 
+		debuglog("=== STARTING NEW LOOP ITERATION ===");
 		/* Select a role */
 		result = 1;
 		if(flags.initrole < 0)
 		{
-			/* Prompt for a role */
-			win = create_nhwindow(NHW_MENU);
-			and_start_menu(win);
-			any.a_void = 0; /* zero out all bits */
-			any.a_int = randrole(TRUE)+1;
-			and_add_menu(win, NO_GLYPH, &any, '*', 0, ATR_NONE, "Random", MENU_UNSELECTED);
-			for(i = 0; roles[i].name.m; i++)
-			{
-				if(ok_role(i, flags.initrace, flags.initgend, flags.initalign))
+			int retry_count = 0;
+			const int max_retries = 3;
+			
+			while (retry_count < max_retries) {
+				/* Prompt for a role */
+				win = create_nhwindow(NHW_MENU);
+				and_start_menu(win);
+				any.a_void = 0; /* zero out all bits */
+				any.a_int = randrole(TRUE)+1;
+				and_add_menu(win, NO_GLYPH, &any, '*', 0, ATR_NONE, "Random", MENU_UNSELECTED);
+				for(i = 0; roles[i].name.m; i++)
 				{
-					any.a_int = i + 1; /* must be non-zero */
-					thisch = lowc(roles[i].name.m[0]);
-					if(thisch == lastch)
-						thisch = highc(thisch);
-					and_add_menu(win, NO_GLYPH, &any, thisch, 0, ATR_NONE, roles[i].name.m, MENU_UNSELECTED);
-					lastch = thisch;
+					if(ok_role(i, flags.initrace, flags.initgend, flags.initalign))
+					{
+						any.a_int = i + 1; /* must be non-zero */
+						thisch = lowc(roles[i].name.m[0]);
+						if(thisch == lastch)
+							thisch = highc(thisch);
+						and_add_menu(win, NO_GLYPH, &any, thisch, 0, ATR_NONE, roles[i].name.m, MENU_UNSELECTED);
+						lastch = thisch;
+					}
 				}
+				and_end_menu(win, "Pick a role");
+				result = and_select_menu(win, PICK_ONE, &selected);
+				and_destroy_nhwindow(win);
+
+				if(result > 0) {
+					flags.initrole = selected[0].item.a_int - 1;
+					debuglog("Role selected: %d (%s)", flags.initrole, roles[flags.initrole].name.m);
+					free((genericptr_t)selected), selected = 0;
+					break; // Success
+				}
+				
+				free((genericptr_t)selected), selected = 0;
+				retry_count++;
+				debuglog("player_selection: role selection failed (attempt %d), result=%d", retry_count, result);
+				
+				if (retry_count >= max_retries) {
+					// Too many failures, exit
+					debuglog("player_selection: too many failures, calling nh_terminate from role selection loop");
+					clearlocks();
+					and_exit_nhwindows("bye");
+					nh_terminate(EXIT_SUCCESS);
+				}
+				
+				// Wait a bit before retrying (in case it's a timing issue)
+				and_delay_output();
 			}
-			and_end_menu(win, "Pick a role");
-			result = and_select_menu(win, PICK_ONE, &selected);
-			and_destroy_nhwindow(win);
-
-			if(result > 0)
-				flags.initrole = selected[0].item.a_int - 1;
-			free((genericptr_t)selected), selected = 0;
 		}
 
-		if(result <= 0)
-		{
-		    clearlocks();
-		    and_exit_nhwindows("bye");
-		    nh_terminate(EXIT_SUCCESS);
-		}
+		// Removed the immediate exit check here since we handle it in the loop above
 
+		debuglog("After role selection: initrole=%d", flags.initrole);
 		/* Select a race, if necessary */
 		if(flags.initrace < 0)
 			flags.initrace = pick_race(flags.initrole, flags.initgend, flags.initalign, PICK_RIGID);
@@ -483,6 +506,7 @@ void and_player_selection()
 			if(result > 0)
 			{
 				flags.initrace = selected[0].item.a_int - 1;
+				debuglog("Race selected: %d (%s)", flags.initrace, races[flags.initrace].noun);
 				state |= 1;
 			}
 			free((genericptr_t)selected), selected = 0;
@@ -490,8 +514,10 @@ void and_player_selection()
 
 		if(result <= 0)
 			continue;
+		debuglog("After race selection: initrace=%d", flags.initrace);
 
 		/* Select a gender, if necessary */
+		debuglog("Calling pick_gend with PICK_RIGID");
 		flags.initgend = pick_gend(flags.initrole, flags.initrace, flags.initalign, PICK_RIGID);
 
 		result = 1;
@@ -514,28 +540,47 @@ void and_player_selection()
 				}
 			and_end_menu(win, "Pick a gender");
 			result = and_select_menu(win, PICK_ONE, &selected);
+			debuglog("Gender selection: and_select_menu returned result=%d", result);
 			and_destroy_nhwindow(win);
+			debuglog("Gender selection completed, result=%d, window destroyed", result);
 
 			if(result > 0)
 			{
 				flags.initgend = selected[0].item.a_int - 1;
+				debuglog("Gender selected via menu: %d (%s)", flags.initgend, genders[flags.initgend].adj);
 				state |= 2;
+				debuglog("Gender selected: %d", flags.initgend);
 			}
 			free((genericptr_t)selected), selected = 0;
 		}
 
-		if(result <= 0)
+		if(result <= 0) {
+			debuglog("Gender selection failed with result=%d, continuing loop", result);
 			continue;
+		}
 
+		debuglog("Proceeding to alignment selection, flags.initrole=%d, flags.initrace=%d, flags.initgend=%d", 
+			flags.initrole, flags.initrace, flags.initgend);
+		
+		// Log validation status
+		debuglog("Validation: validrole(%d)=%d, validrace(%d,%d)=%d, validgend(%d,%d,%d)=%d",
+			flags.initrole, validrole(flags.initrole),
+			flags.initrole, flags.initrace, validrace(flags.initrole, flags.initrace),
+			flags.initrole, flags.initrace, flags.initgend, validgend(flags.initrole, flags.initrace, flags.initgend));
+		
 		/* Select an alignment, if necessary */
+		debuglog("Calling pick_align with PICK_RIGID");
 		flags.initalign = pick_align(flags.initrole, flags.initrace, flags.initgend, PICK_RIGID);
+		debuglog("pick_align returned: %d", flags.initalign);
+		debuglog("Current flags.initalign after pick_align: %d", flags.initalign);
 
 		result = 1;
+		debuglog("Checking if flags.initalign < 0: %d < 0 = %s", flags.initalign, (flags.initalign < 0) ? "true" : "false");
 		if(flags.initalign < 0)
 		{
 			/* tty_clear_nhwindow(BASE_WINDOW); */
 			/* tty_putstr(BASE_WINDOW, 0, "Choosing Alignment"); */
-			win = and_create_nhwindow(NHW_MENU);
+			win = create_nhwindow(NHW_MENU);
 			and_start_menu(win);
 			any.a_void = 0; /* zero out all bits */
 			any.a_int = randalign(flags.initrole, flags.initrace)+1;
@@ -548,13 +593,29 @@ void and_player_selection()
 				}
 			and_end_menu(win, "Pick an alignment");
 			result = and_select_menu(win, PICK_ONE, &selected);
+			debuglog("Alignment menu: and_select_menu returned result=%d", result);
 			and_destroy_nhwindow(win);
 
-			if(result > 0)
+			if(result > 0) {
 				flags.initalign = selected[0].item.a_int - 1;
+				debuglog("Alignment selected via menu: %d (%s)", flags.initalign, aligns[flags.initalign].adj);
+			} else {
+				debuglog("Alignment menu selection failed with result=%d", result);
+			}
 			free((genericptr_t)selected), selected = 0;
 		}
+		
+		debuglog("End of loop iteration: flags.initalign=%d", flags.initalign);
+		debuglog("Loop condition check: while(flags.initalign < 0) = while(%d < 0) = %s", flags.initalign, (flags.initalign < 0) ? "true (will loop again)" : "false (will exit loop)");
+		
+		/* If alignment selection failed, continue the loop (same as gender/race selection) */
+		if (result <= 0) {
+			debuglog("Alignment selection failed with result=%d, continuing loop", result);
+			continue;
+		}
 	}
+	
+	debuglog("and_player_selection completed successfully, flags.initalign=%d", flags.initalign);
 }
 
 //____________________________________________________________________________________
@@ -1256,17 +1317,18 @@ int and_select_menu_r(winid wid, int how, MENU_ITEM_P **selected, int reentry)
 	jint* p;
 	jint* q;
 
-	//debuglog("and_select_menu");
+	debuglog("and_select_menu_r: wid=%d, how=%d, reentry=%d", wid, how, reentry);
 
 	a = (jintArray)JNICallO(jSelectMenu, wid, how, reentry);
 
 	*selected = 0;
 
-	//debuglog("returned %d", a);
+	debuglog("and_select_menu_r: returned array %p", a);
 	if(a == 0)
 		return -1;
 
 	n = (*jEnv)->GetArrayLength(jEnv, a);
+	debuglog("and_select_menu_r: array length n=%d", n);
 
 	if(n > 1) // n should always be 2k (id, count) pairs
 	{
@@ -1284,10 +1346,21 @@ int and_select_menu_r(winid wid, int how, MENU_ITEM_P **selected, int reentry)
 	else if(n == 1)
 	{
 		// special case: ABORT
+		debuglog("and_select_menu_r: received ABORT signal, program_state.gameover=%d, program_state.something_worth_saving=%d, reentry=%d",
+			program_state.gameover, program_state.something_worth_saving, reentry);
 		if(!program_state.gameover && program_state.something_worth_saving)
 			n = 0;
-		else
+		else if (reentry == 1) {
+			// Already in reentry mode, return -1 to indicate cancellation
+			debuglog("and_select_menu_r: already in reentry mode, returning -1");
+			n = -1;
+		} else {
+			// During character creation (nothing worth saving yet),
+			// ignore ABORT and wait for real input.
+			// This prevents automatic exits if Java sends spurious ABORT signals.
+			debuglog("and_select_menu_r: ignoring ABORT during character creation, retrying");
 			n = and_select_menu_r(wid, how, selected, 1);
+		}
 	}
 
 	destroy_jobject(a);
@@ -1460,7 +1533,12 @@ int and_nhgetch()
 			quit_if_possible = TRUE;
 		}
 		else
-			c = and_nhgetch();
+		{
+			// During character creation or when nothing to save,
+			// treat 0x80 as ESC instead of recursively calling
+			// to avoid infinite recursion if Java keeps sending 0x80
+			c = '\033';
+		}
 	}
 	return c;
 }
@@ -1880,7 +1958,7 @@ void and_getlin_log(const char *question, char *input)
 //askname()	-- Ask the user for a player name.
 void and_askname()
 {
-//	debuglog("ask name");
+	debuglog("and_askname() called, program_state.something_worth_saving=%d", program_state.something_worth_saving);
 
 	int i, n, w;
 	const jchar* pChars;
