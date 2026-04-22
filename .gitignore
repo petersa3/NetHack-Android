@@ -16,6 +16,9 @@ local.properties
 *.jks
 create-keystore.sh
 
+# APK files in root
+*.apk
+
 # IDE files
 .idea/
 *.iml
