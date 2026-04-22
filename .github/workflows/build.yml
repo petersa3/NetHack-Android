@@ -1,0 +1,118 @@
+name: Build NetHack Android
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+  release:
+    types: [ created ]
+
+jobs:
+  build-debug:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+    
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+    
+    - name: Install NDK
+      run: sdkmanager "ndk;26.2.11394342"
+    
+    - name: Cache Gradle packages
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+        restore-keys: |
+          ${{ runner.os }}-gradle-
+    
+    - name: Build native library
+      run: |
+        cd src
+        make -f ../sys/android/Makefile.src Sysandroid
+    
+    - name: Build debug APK
+      run: |
+        cd sys/android
+        ./gradlew assembleDebug
+    
+    - name: Upload debug APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: nethack-android-debug
+        path: sys/android/app/build/outputs/apk/debug/app-debug.apk
+
+  build-release:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+    
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+    
+    - name: Install NDK
+      run: sdkmanager "ndk;26.2.11394342"
+    
+    - name: Cache Gradle packages
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+        restore-keys: |
+          ${{ runner.os }}-gradle-
+    
+    - name: Build native library
+      run: |
+        cd src
+        make -f ../sys/android/Makefile.src Sysandroid
+    
+    - name: Decode keystore
+      env:
+        ENCODED_KEYSTORE: ${{ secrets.KEYSTORE_BASE64 }}
+      run: |
+        echo $ENCODED_KEYSTORE | base64 -d > sys/android/nethack-release.keystore
+    
+    - name: Create local.properties
+      env:
+        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+      run: |
+        cat > sys/android/local.properties << EOF
+        RELEASE_STORE_FILE=../nethack-release.keystore
+        RELEASE_STORE_PASSWORD=$KEYSTORE_PASSWORD
+        RELEASE_KEY_ALIAS=nethack
+        RELEASE_KEY_PASSWORD=$KEYSTORE_PASSWORD
+        EOF
+    
+    - name: Build release APK
+      run: |
+        cd sys/android
+        ./gradlew assembleRelease
+    
+    - name: Upload release APK to GitHub Release
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: sys/android/app/build/outputs/apk/release/app-release.apk
+        asset_name: nethack-android-${{ github.event.release.tag_name }}.apk
+        asset_content_type: application/vnd.android.package-archive
