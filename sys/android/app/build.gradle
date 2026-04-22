@@ -29,6 +29,11 @@ android {
     targetCompatibility JavaVersion.VERSION_17
   }
 
+  // Avoid jlink issues with Java 21
+  tasks.withType(JavaCompile) {
+    options.fork = false
+  }
+
   lintOptions {
     disable 'MissingClass'
   }

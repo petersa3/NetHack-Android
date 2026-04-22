@@ -10,8 +10,10 @@ build/
 app/build/
 lib/build/
 
-# Local properties
+# Local properties and secrets
 local.properties
+*.keystore
+*.jks
 
 # IDE files
 .idea/
